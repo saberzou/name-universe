@@ -719,15 +719,14 @@ function enableGyro() {
   let hasRealData = false;
   window.addEventListener('deviceorientation', (e) => {
     if (!isActive) return;
-    // Only enable gyro if we get meaningful data (not all zeros)
     if (!hasRealData) {
       if (e.beta === null && e.gamma === null) return;
       if (Math.abs(e.beta) < 0.01 && Math.abs(e.gamma) < 0.01) return;
       hasRealData = true;
       gyroEnabled = true;
-      controls.enabled = false;
+      // Don't disable OrbitControls — gyro is additive
     }
-    const maxTilt = 15;
+    const maxTilt = 8;
     targetGyroX = THREE.MathUtils.clamp((e.beta - 45) / 90, -1, 1) * maxTilt * (Math.PI / 180);
     targetGyroY = THREE.MathUtils.clamp(e.gamma / 90, -1, 1) * maxTilt * (Math.PI / 180);
   }, true);
@@ -754,16 +753,14 @@ function animate() {
   requestAnimationFrame(animate);
   if (!isActive) return;
 
-  // Gyro smoothing
+  // Gyro: subtle scene tilt (additive to orbit controls)
   if (gyroEnabled) {
     currentGyroX += (targetGyroX - currentGyroX) * 0.04;
     currentGyroY += (targetGyroY - currentGyroY) * 0.04;
-    camera.quaternion.copy(baseQuaternion);
-    camera.rotateX(currentGyroX);
-    camera.rotateY(currentGyroY);
-  } else {
-    controls.update();
+    scene.rotation.x = currentGyroX;
+    scene.rotation.z = currentGyroY;
   }
+  controls.update();
 
   // Gentle scene rotation
   if (starsMesh) starsMesh.rotation.y += 0.0001;
