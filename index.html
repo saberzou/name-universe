@@ -64,11 +64,11 @@ canvas { display: block; }
   padding: 8px 4px;
   width: min(320px, 80vw);
   outline: none;
-  caret-color: #7b8cff;
+  caret-color: #ffd166;
   transition: border-color 0.3s;
 }
 #name-input:focus {
-  border-color: #7b8cff;
+  border-color: #ffd166;
 }
 #name-input::placeholder {
   color: #335;
@@ -88,8 +88,8 @@ canvas { display: block; }
   transition: all 0.3s;
 }
 #go-btn:hover {
-  border-color: #7b8cff;
-  color: #7b8cff;
+  border-color: #ffd166;
+  color: #ffd166;
 }
 
 /* HUD overlay */
@@ -141,8 +141,8 @@ canvas { display: block; }
   -webkit-tap-highlight-color: transparent;
 }
 .hud-btn:hover, .hud-btn:active {
-  border-color: #7b8cff;
-  color: #7b8cff;
+  border-color: #ffd166;
+  color: #ffd166;
 }
 
 /* Hint */
@@ -172,7 +172,7 @@ canvas { display: block; }
   font-family: 'Space Mono', monospace;
   font-size: 11px;
   letter-spacing: 3px;
-  color: #7b8cff;
+  color: #ffd166;
   z-index: 6;
   opacity: 0;
   transition: opacity 0.4s;
@@ -280,12 +280,12 @@ function playTone(freqIndex) {
 /* ── Color palette from seed ── */
 function generatePalette(rng) {
   const palettes = [
-    ['#7b8cff', '#a78bfa', '#60a5fa', '#c4b5fd'],
-    ['#f472b6', '#fb923c', '#fbbf24', '#f9a8d4'],
-    ['#34d399', '#2dd4bf', '#67e8f9', '#a7f3d0'],
-    ['#fb7185', '#f472b6', '#c084fc', '#e879f9'],
-    ['#38bdf8', '#818cf8', '#a78bfa', '#7dd3fc'],
-    ['#fbbf24', '#f59e0b', '#fb923c', '#fcd34d'],
+    ['#ff8906', '#f25f4c', '#e53170', '#ff6b6b'],   // ember sunset
+    ['#ff6b6b', '#feca57', '#ff9ff3', '#f368e0'],   // warm carnival
+    ['#ffd166', '#ef476f', '#06d6a0', '#118ab2'],   // joyful pop
+    ['#f7b731', '#fc5c65', '#a55eea', '#26de81'],   // playful bright
+    ['#ff9a76', '#ffeaa7', '#dfe6e9', '#fd79a8'],   // blush sunrise
+    ['#fdcb6e', '#e17055', '#00cec9', '#6c5ce7'],   // tropical joy
   ];
   return palettes[Math.floor(rng() * palettes.length)];
 }
@@ -528,6 +528,99 @@ function buildUniverse(name) {
     nebulaeMeshes.push(sprite);
   }
 
+  // ── Central Planet ──
+  const planetRadius = 1.2 + rng() * 0.8;
+  const planetDetail = 64;
+  const planetGeom = new THREE.SphereGeometry(planetRadius, planetDetail, planetDetail);
+
+  // Procedural planet texture from canvas
+  const ptexSize = 512;
+  const ptexCanvas = document.createElement('canvas');
+  ptexCanvas.width = ptexSize;
+  ptexCanvas.height = ptexSize;
+  const ptx = ptexCanvas.getContext('2d');
+
+  // Base gradient
+  const baseCol1 = palette[0];
+  const baseCol2 = palette[1];
+  const pGrad = ptx.createLinearGradient(0, 0, ptexSize, ptexSize);
+  pGrad.addColorStop(0, baseCol1);
+  pGrad.addColorStop(0.5, baseCol2);
+  pGrad.addColorStop(1, palette[2] || baseCol1);
+  ptx.fillStyle = pGrad;
+  ptx.fillRect(0, 0, ptexSize, ptexSize);
+
+  // Organic swirl bands
+  for (let b = 0; b < 8; b++) {
+    ptx.globalAlpha = 0.12 + rng() * 0.15;
+    ptx.fillStyle = palette[Math.floor(rng() * palette.length)];
+    const yy = rng() * ptexSize;
+    const h = 20 + rng() * 60;
+    ptx.beginPath();
+    ptx.ellipse(ptexSize / 2, yy, ptexSize * 0.6, h, rng() * 0.3, 0, Math.PI * 2);
+    ptx.fill();
+  }
+  // Noise dots for texture
+  for (let n = 0; n < 2000; n++) {
+    ptx.globalAlpha = rng() * 0.08;
+    ptx.fillStyle = rng() > 0.5 ? '#ffffff' : '#000000';
+    ptx.fillRect(rng() * ptexSize, rng() * ptexSize, 2, 2);
+  }
+  ptx.globalAlpha = 1;
+
+  const planetTex = new THREE.CanvasTexture(ptexCanvas);
+  const planetMat = new THREE.MeshStandardMaterial({
+    map: planetTex,
+    roughness: 0.7,
+    metalness: 0.1,
+  });
+  const planet = new THREE.Mesh(planetGeom, planetMat);
+  planet.position.set(0, 0, 0);
+  scene.add(planet);
+
+  // Atmosphere glow
+  const atmosGeom = new THREE.SphereGeometry(planetRadius * 1.15, 48, 48);
+  const atmosMat = new THREE.ShaderMaterial({
+    vertexShader: `
+      varying vec3 vNormal;
+      varying vec3 vPosition;
+      void main() {
+        vNormal = normalize(normalMatrix * normal);
+        vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 glowColor;
+      varying vec3 vNormal;
+      varying vec3 vPosition;
+      void main() {
+        float intensity = pow(0.65 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.0);
+        gl_FragColor = vec4(glowColor, intensity * 0.6);
+      }
+    `,
+    uniforms: {
+      glowColor: { value: new THREE.Color(palette[0]) }
+    },
+    side: THREE.BackSide,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const atmosphere = new THREE.Mesh(atmosGeom, atmosMat);
+  scene.add(atmosphere);
+
+  // Light for planet
+  const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+  sunLight.position.set(5, 3, 7);
+  scene.add(sunLight);
+  const ambLight = new THREE.AmbientLight(0x333344, 0.5);
+  scene.add(ambLight);
+
+  // Store planet ref for rotation in animate loop
+  scene._planet = planet;
+  scene._atmosphere = atmosphere;
+
   // ── Ambient dust (tiny particles in foreground) ──
   const dustCount = 500;
   const dustPos = new Float32Array(dustCount * 3);
@@ -625,6 +718,8 @@ function animate() {
   if (starsMesh) starsMesh.rotation.y += 0.0001;
   if (constellationLines) constellationLines.rotation.y += 0.0001;
   nebulaeMeshes.forEach(n => n.material.rotation += 0.0002);
+  if (scene._planet) scene._planet.rotation.y += 0.001;
+  if (scene._atmosphere) scene._atmosphere.rotation.y += 0.0005;
 
   composer.render();
 }
