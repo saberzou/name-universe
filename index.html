@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Name Universe</title>
+<meta name="description" content="Type a name. Discover its universe.">
+<meta property="og:title" content="Name Universe">
+<meta property="og:description" content="Type a name. Discover its universe.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #06060f;
+  color: #e8e8f0;
+  font-family: 'DM Sans', sans-serif;
+  overflow: hidden;
+  height: 100dvh;
+  width: 100vw;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+canvas { display: block; }
+
+/* Entry screen */
+#entry {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  background: #06060f;
+  transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+#entry.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#entry h1 {
+  font-family: 'Space Mono', monospace;
+  font-size: 14px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #667;
+  font-weight: 400;
+}
+
+#name-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #334;
+  color: #e8e8f0;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 28px;
+  text-align: center;
+  padding: 8px 4px;
+  width: min(320px, 80vw);
+  outline: none;
+  caret-color: #7b8cff;
+  transition: border-color 0.3s;
+}
+#name-input:focus {
+  border-color: #7b8cff;
+}
+#name-input::placeholder {
+  color: #335;
+}
+
+#go-btn {
+  background: transparent;
+  border: 1px solid #334;
+  color: #99a;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  padding: 10px 32px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+#go-btn:hover {
+  border-color: #7b8cff;
+  color: #7b8cff;
+}
+
+/* HUD overlay */
+#hud {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+  gap: 12px;
+  opacity: 0;
+  transition: opacity 1s ease 0.5s;
+  pointer-events: none;
+}
+#hud.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#universe-name {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: #556;
+}
+
+#hud-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.hud-btn {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #667;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 8px 20px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s;
+  -webkit-tap-highlight-color: transparent;
+}
+.hud-btn:hover, .hud-btn:active {
+  border-color: #7b8cff;
+  color: #7b8cff;
+}
+
+/* Hint */
+#tilt-hint {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: #445;
+  z-index: 6;
+  opacity: 0;
+  transition: opacity 0.6s;
+  pointer-events: none;
+  text-align: center;
+}
+#tilt-hint.visible { opacity: 1; }
+
+/* Tone indicator */
+#tone-indicator {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #7b8cff;
+  z-index: 6;
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+#tone-indicator.visible { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="entry">
+  <h1>Name Universe</h1>
+  <input id="name-input" type="text" placeholder="Enter a name" maxlength="24" autocomplete="off" spellcheck="false">
+  <button id="go-btn">Discover</button>
+</div>
+
+<div id="hud">
+  <div id="universe-name"></div>
+  <div id="hud-actions">
+    <button class="hud-btn" id="btn-new">New</button>
+    <button class="hud-btn" id="btn-share">Share</button>
+  </div>
+</div>
+
+<div id="tilt-hint"></div>
+<div id="tone-indicator"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.171.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.171.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+/* ── Seeded RNG ── */
+function cyrb128(str) {
+  let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;
+  for (let i = 0; i < str.length; i++) {
+    let k = str.charCodeAt(i);
+    h1 = h2 ^ Math.imul(h1 ^ k, 597399067);
+    h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
+    h3 = h4 ^ Math.imul(h3 ^ k, 951274213);
+    h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);
+  }
+  h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);
+  h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
+  h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
+  h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
+  h1 ^= h2 ^ h3 ^ h4; h2 ^= h1; h3 ^= h1; h4 ^= h1;
+  return [h1 >>> 0, h2 >>> 0, h3 >>> 0, h4 >>> 0];
+}
+
+function sfc32(a, b, c, d) {
+  return function() {
+    a |= 0; b |= 0; c |= 0; d |= 0;
+    let t = (a + b | 0) + d | 0;
+    d = d + 1 | 0;
+    a = b ^ b >>> 9;
+    b = c + (c << 3) | 0;
+    c = (c << 21 | c >>> 11);
+    c = c + t | 0;
+    return (t >>> 0) / 4294967296;
+  };
+}
+
+function makeRng(name) {
+  const seed = cyrb128(name.toLowerCase().trim());
+  return sfc32(seed[0], seed[1], seed[2], seed[3]);
+}
+
+/* ── Pentatonic tones ── */
+const PENTATONIC = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25];
+let audioCtx = null;
+
+function playTone(freqIndex) {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const freq = PENTATONIC[freqIndex % PENTATONIC.length];
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 1.2);
+
+  const indicator = document.getElementById('tone-indicator');
+  const notes = ['C', 'D', 'E', 'G', 'A', 'C\'', 'D\'', 'E\''];
+  indicator.textContent = '♪ ' + notes[freqIndex % notes.length];
+  indicator.classList.add('visible');
+  clearTimeout(indicator._t);
+  indicator._t = setTimeout(() => indicator.classList.remove('visible'), 800);
+}
+
+/* ── Color palette from seed ── */
+function generatePalette(rng) {
+  const palettes = [
+    ['#7b8cff', '#a78bfa', '#60a5fa', '#c4b5fd'],
+    ['#f472b6', '#fb923c', '#fbbf24', '#f9a8d4'],
+    ['#34d399', '#2dd4bf', '#67e8f9', '#a7f3d0'],
+    ['#fb7185', '#f472b6', '#c084fc', '#e879f9'],
+    ['#38bdf8', '#818cf8', '#a78bfa', '#7dd3fc'],
+    ['#fbbf24', '#f59e0b', '#fb923c', '#fcd34d'],
+  ];
+  return palettes[Math.floor(rng() * palettes.length)];
+}
+
+/* ── Three.js Scene ── */
+let scene, camera, renderer, composer, controls;
+let starsMesh, constellationLines, nebulaeMeshes = [];
+let gyroEnabled = false;
+let targetGyroX = 0, targetGyroY = 0;
+let currentGyroX = 0, currentGyroY = 0;
+let baseQuaternion = new THREE.Quaternion();
+let isActive = false;
+let raycaster, pointer;
+let starPositions = [];
+let constellationStarIndices = [];
+
+function init() {
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+  camera.position.set(0, 0, 5);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0x06060f);
+  document.body.prepend(renderer.domElement);
+
+  // Post-processing bloom
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  const bloom = new UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    1.2, 0.5, 0.3
+  );
+  composer.addPass(bloom);
+
+  // Controls (desktop)
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.enableZoom = false;
+  controls.enablePan = false;
+  controls.rotateSpeed = 0.3;
+  controls.enabled = false;
+
+  raycaster = new THREE.Raycaster();
+  raycaster.params.Points.threshold = 0.15;
+  pointer = new THREE.Vector2();
+
+  window.addEventListener('resize', onResize);
+  renderer.domElement.addEventListener('pointerdown', onTap);
+}
+
+function onResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function onTap(e) {
+  if (!isActive) return;
+  pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+
+  if (starsMesh) {
+    const intersects = raycaster.intersectObject(starsMesh);
+    if (intersects.length > 0) {
+      const idx = intersects[0].index;
+      playTone(idx);
+    }
+  }
+}
+
+/* ── Build Universe ── */
+function buildUniverse(name) {
+  // Clear previous
+  while (scene.children.length) scene.remove(scene.children[0]);
+  starPositions = [];
+  constellationStarIndices = [];
+  nebulaeMeshes = [];
+
+  const rng = makeRng(name);
+  const palette = generatePalette(rng);
+  const starCount = 3000 + Math.floor(rng() * 4000);
+  const spread = 80;
+
+  // ── Stars ──
+  const positions = new Float32Array(starCount * 3);
+  const colors = new Float32Array(starCount * 3);
+  const sizes = new Float32Array(starCount);
+
+  for (let i = 0; i < starCount; i++) {
+    const theta = rng() * Math.PI * 2;
+    const phi = Math.acos(2 * rng() - 1);
+    const r = spread * (0.3 + rng() * 0.7);
+    const x = r * Math.sin(phi) * Math.cos(theta);
+    const y = r * Math.sin(phi) * Math.sin(theta);
+    const z = r * Math.cos(phi);
+    positions[i * 3] = x;
+    positions[i * 3 + 1] = y;
+    positions[i * 3 + 2] = z;
+    starPositions.push(new THREE.Vector3(x, y, z));
+
+    const col = new THREE.Color(palette[Math.floor(rng() * palette.length)]);
+    const brightness = 0.5 + rng() * 0.5;
+    colors[i * 3] = col.r * brightness;
+    colors[i * 3 + 1] = col.g * brightness;
+    colors[i * 3 + 2] = col.b * brightness;
+
+    sizes[i] = 0.04 + rng() * 0.18;
+  }
+
+  const starGeom = new THREE.BufferGeometry();
+  starGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  starGeom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  starGeom.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+  const starMat = new THREE.ShaderMaterial({
+    vertexShader: `
+      attribute float size;
+      varying vec3 vColor;
+      void main() {
+        vColor = color;
+        vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = size * (300.0 / -mvPos.z);
+        gl_Position = projectionMatrix * mvPos;
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vColor;
+      void main() {
+        float d = length(gl_PointCoord - vec2(0.5));
+        if (d > 0.5) discard;
+        float glow = 1.0 - smoothstep(0.0, 0.5, d);
+        gl_FragColor = vec4(vColor, glow * glow);
+      }
+    `,
+    vertexColors: true,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+
+  starsMesh = new THREE.Points(starGeom, starMat);
+  scene.add(starsMesh);
+
+  // ── Constellation from name letters ──
+  const letters = name.toUpperCase().replace(/[^A-Z0-9]/g, '').split('');
+  const constellationCount = Math.min(letters.length, 12);
+  const conLinePositions = [];
+  const constellationRadius = 12 + rng() * 8;
+
+  for (let i = 0; i < constellationCount; i++) {
+    const angle = (i / constellationCount) * Math.PI * 2 + rng() * 0.4 - 0.2;
+    const yOff = (rng() - 0.5) * constellationRadius * 0.6;
+    const x = Math.cos(angle) * constellationRadius * (0.7 + rng() * 0.3);
+    const z = Math.sin(angle) * constellationRadius * (0.7 + rng() * 0.3);
+    const pos = new THREE.Vector3(x, yOff, z);
+
+    // Find nearest star and nudge it to constellation position
+    const nearIdx = i * Math.floor(starCount / constellationCount);
+    positions[nearIdx * 3] = pos.x;
+    positions[nearIdx * 3 + 1] = pos.y;
+    positions[nearIdx * 3 + 2] = pos.z;
+    sizes[nearIdx] = 0.2 + rng() * 0.1;
+    const cc = new THREE.Color(palette[0]);
+    colors[nearIdx * 3] = cc.r;
+    colors[nearIdx * 3 + 1] = cc.g;
+    colors[nearIdx * 3 + 2] = cc.b;
+    starPositions[nearIdx] = pos.clone();
+    constellationStarIndices.push(nearIdx);
+
+    if (i > 0) {
+      const prevIdx = constellationStarIndices[i - 1];
+      conLinePositions.push(
+        starPositions[prevIdx].x, starPositions[prevIdx].y, starPositions[prevIdx].z,
+        pos.x, pos.y, pos.z
+      );
+    }
+  }
+  // Close the loop
+  if (constellationCount > 2) {
+    const first = starPositions[constellationStarIndices[0]];
+    const last = starPositions[constellationStarIndices[constellationCount - 1]];
+    conLinePositions.push(last.x, last.y, last.z, first.x, first.y, first.z);
+  }
+
+  // Update star geometry
+  starGeom.attributes.position.needsUpdate = true;
+  starGeom.attributes.color.needsUpdate = true;
+  starGeom.attributes.size.needsUpdate = true;
+
+  // Constellation lines
+  const lineGeom = new THREE.BufferGeometry();
+  lineGeom.setAttribute('position', new THREE.Float32BufferAttribute(conLinePositions, 3));
+  const lineMat = new THREE.LineBasicMaterial({
+    color: new THREE.Color(palette[0]),
+    transparent: true,
+    opacity: 0.25,
+    blending: THREE.AdditiveBlending,
+  });
+  constellationLines = new THREE.LineSegments(lineGeom, lineMat);
+  scene.add(constellationLines);
+
+  // ── Nebulae (soft glowing sprites) ──
+  const nebulaCount = 3 + Math.floor(rng() * 3);
+  for (let i = 0; i < nebulaCount; i++) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+    const col = palette[Math.floor(rng() * palette.length)];
+    grad.addColorStop(0, col + '40');
+    grad.addColorStop(0.4, col + '18');
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 256, 256);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    const spriteMat = new THREE.SpriteMaterial({
+      map: tex,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      opacity: 0.4 + rng() * 0.3,
+    });
+    const sprite = new THREE.Sprite(spriteMat);
+    const nr = spread * 0.5;
+    sprite.position.set(
+      (rng() - 0.5) * nr,
+      (rng() - 0.5) * nr,
+      (rng() - 0.5) * nr
+    );
+    const s = 15 + rng() * 25;
+    sprite.scale.set(s, s, 1);
+    scene.add(sprite);
+    nebulaeMeshes.push(sprite);
+  }
+
+  // ── Ambient dust (tiny particles in foreground) ──
+  const dustCount = 500;
+  const dustPos = new Float32Array(dustCount * 3);
+  const dustSizes = new Float32Array(dustCount);
+  for (let i = 0; i < dustCount; i++) {
+    dustPos[i * 3] = (rng() - 0.5) * 30;
+    dustPos[i * 3 + 1] = (rng() - 0.5) * 30;
+    dustPos[i * 3 + 2] = (rng() - 0.5) * 30;
+    dustSizes[i] = 0.02 + rng() * 0.04;
+  }
+  const dustGeom = new THREE.BufferGeometry();
+  dustGeom.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+  dustGeom.setAttribute('size', new THREE.BufferAttribute(dustSizes, 1));
+  const dustMat = new THREE.ShaderMaterial({
+    vertexShader: `
+      attribute float size;
+      void main() {
+        vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = size * (200.0 / -mvPos.z);
+        gl_Position = projectionMatrix * mvPos;
+      }
+    `,
+    fragmentShader: `
+      void main() {
+        float d = length(gl_PointCoord - vec2(0.5));
+        if (d > 0.5) discard;
+        float a = 1.0 - smoothstep(0.0, 0.5, d);
+        gl_FragColor = vec4(0.6, 0.6, 0.7, a * 0.3);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const dustMesh = new THREE.Points(dustGeom, dustMat);
+  scene.add(dustMesh);
+}
+
+/* ── Gyroscope ── */
+function initGyroscope() {
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission()
+      .then(state => { if (state === 'granted') enableGyro(); })
+      .catch(() => {});
+  } else if ('DeviceOrientationEvent' in window) {
+    enableGyro();
+  }
+}
+
+function enableGyro() {
+  window.addEventListener('deviceorientation', (e) => {
+    if (!isActive) return;
+    gyroEnabled = true;
+    controls.enabled = false;
+    const maxTilt = 15;
+    targetGyroX = THREE.MathUtils.clamp((e.beta - 45) / 90, -1, 1) * maxTilt * (Math.PI / 180);
+    targetGyroY = THREE.MathUtils.clamp(e.gamma / 90, -1, 1) * maxTilt * (Math.PI / 180);
+  }, true);
+}
+
+/* ── Fly-in animation ── */
+function flyIn() {
+  camera.position.set(0, 0, 120);
+  const target = { z: 5 };
+  const duration = 2500;
+  const start = performance.now();
+  const ease = t => 1 - Math.pow(1 - t, 3); // easeOutCubic
+
+  function step(now) {
+    const t = Math.min((now - start) / duration, 1);
+    camera.position.z = 120 + (5 - 120) * ease(t);
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+/* ── Animation loop ── */
+function animate() {
+  requestAnimationFrame(animate);
+  if (!isActive) return;
+
+  // Gyro smoothing
+  if (gyroEnabled) {
+    currentGyroX += (targetGyroX - currentGyroX) * 0.04;
+    currentGyroY += (targetGyroY - currentGyroY) * 0.04;
+    camera.quaternion.copy(baseQuaternion);
+    camera.rotateX(currentGyroX);
+    camera.rotateY(currentGyroY);
+  } else {
+    controls.update();
+  }
+
+  // Gentle scene rotation
+  if (starsMesh) starsMesh.rotation.y += 0.0001;
+  if (constellationLines) constellationLines.rotation.y += 0.0001;
+  nebulaeMeshes.forEach(n => n.material.rotation += 0.0002);
+
+  composer.render();
+}
+
+/* ── Launch ── */
+function launch(name) {
+  if (!name.trim()) return;
+  isActive = true;
+
+  buildUniverse(name);
+  flyIn();
+
+  document.getElementById('entry').classList.add('hidden');
+  document.getElementById('hud').classList.add('visible');
+  document.getElementById('universe-name').textContent = name.toUpperCase();
+
+  controls.enabled = !gyroEnabled;
+
+  // Tilt hint
+  const hint = document.getElementById('tilt-hint');
+  const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+  hint.textContent = isMobile ? 'Tilt your phone to explore' : 'Drag to explore';
+  hint.classList.add('visible');
+  setTimeout(() => hint.classList.remove('visible'), 3000);
+
+  // URL
+  const url = new URL(window.location);
+  url.searchParams.set('name', name);
+  history.replaceState(null, '', url);
+
+  // Request gyro on mobile (iOS needs gesture)
+  if (isMobile) initGyroscope();
+}
+
+/* ── UI Bindings ── */
+init();
+animate();
+
+const input = document.getElementById('name-input');
+const goBtn = document.getElementById('go-btn');
+
+goBtn.addEventListener('click', () => launch(input.value));
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') launch(input.value);
+});
+
+document.getElementById('btn-new').addEventListener('click', () => {
+  isActive = false;
+  document.getElementById('entry').classList.remove('hidden');
+  document.getElementById('hud').classList.remove('visible');
+  input.value = '';
+  input.focus();
+  camera.position.set(0, 0, 5);
+  gyroEnabled = false;
+  currentGyroX = 0; currentGyroY = 0;
+  targetGyroX = 0; targetGyroY = 0;
+  controls.enabled = true;
+  controls.reset();
+});
+
+document.getElementById('btn-share').addEventListener('click', () => {
+  const url = window.location.href;
+  if (navigator.share) {
+    navigator.share({ title: 'Name Universe', url });
+  } else {
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.getElementById('btn-share');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Share', 2000);
+    });
+  }
+});
+
+// Auto-launch from URL param
+const urlName = new URLSearchParams(window.location.search).get('name');
+if (urlName) {
+  input.value = urlName;
+  setTimeout(() => launch(urlName), 300);
+} else {
+  input.focus();
+}
+</script>
+</body>
+</html>
