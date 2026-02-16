@@ -9,6 +9,7 @@
 <meta property="og:description" content="Type a name. Discover its universe.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=Space+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir/css/iconoir.css">
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -86,6 +87,9 @@ canvas { display: block; }
   cursor: pointer;
   border-radius: 4px;
   transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 #go-btn:hover {
   border-color: #ffd166;
@@ -130,13 +134,15 @@ canvas { display: block; }
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.08);
   color: #667;
-  font-family: 'Space Mono', monospace;
-  font-size: 11px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  padding: 8px 20px;
+  font-size: 18px;
+  padding: 10px;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 50%;
   transition: all 0.3s;
   -webkit-tap-highlight-color: transparent;
 }
@@ -186,14 +192,14 @@ canvas { display: block; }
 <div id="entry">
   <h1>Name Universe</h1>
   <input id="name-input" type="text" placeholder="Enter a name" maxlength="24" autocomplete="off" spellcheck="false">
-  <button id="go-btn">Discover</button>
+  <button id="go-btn"><i class="iconoir-search"></i> Discover</button>
 </div>
 
 <div id="hud">
   <div id="universe-name"></div>
   <div id="hud-actions">
-    <button class="hud-btn" id="btn-new">New</button>
-    <button class="hud-btn" id="btn-share">Share</button>
+    <button class="hud-btn" id="btn-new"><i class="iconoir-refresh-double"></i></button>
+    <button class="hud-btn" id="btn-share"><i class="iconoir-share-ios"></i></button>
   </div>
 </div>
 
@@ -836,8 +842,8 @@ document.getElementById('btn-share').addEventListener('click', () => {
   } else {
     navigator.clipboard.writeText(url).then(() => {
       const btn = document.getElementById('btn-share');
-      btn.textContent = 'Copied!';
-      setTimeout(() => btn.textContent = 'Share', 2000);
+      btn.innerHTML = '<i class="iconoir-check"></i>';
+      setTimeout(() => btn.innerHTML = '<i class="iconoir-share-ios"></i>', 2000);
     });
   }
 });
