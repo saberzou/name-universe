@@ -2,209 +2,173 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Name Universe</title>
-<meta name="description" content="Type a name. Discover its universe.">
-<meta property="og:title" content="Name Universe">
-<meta property="og:description" content="Type a name. Discover its universe.">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Postcards from Mars</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=Space+Mono&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir/css/iconoir.css">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-body {
-  background: #020208;
-  color: #e8e8f0;
-  font-family: 'DM Sans', sans-serif;
-  overflow: hidden;
-  height: 100dvh;
-  width: 100vw;
-  touch-action: none;
-  -webkit-tap-highlight-color: transparent;
+:root {
+  --rust: #C1440E;
+  --dust: #E8763A;
+  --sand: #D4A574;
+  --charcoal: #1A1A1A;
+  --gray: #8B8B8B;
+  --cream: #F5EDE3;
 }
 
-canvas { display: block; }
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: 'DM Sans', sans-serif;
+  background: var(--charcoal);
+  color: var(--cream);
+  -webkit-font-smoothing: antialiased;
+}
 
-/* Entry screen */
-#entry {
+/* --- Canvas fills viewport --- */
+#scene {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+/* --- UI overlay --- */
+.overlay {
   position: fixed;
   inset: 0;
   z-index: 10;
+  pointer-events: none;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 24px;
-  background: #020208;
-  transition: opacity 0.8s ease, visibility 0.8s ease;
-}
-#entry.hidden {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
 }
 
-#entry h1 {
-  font-family: 'Space Mono', monospace;
-  font-size: 14px;
-  letter-spacing: 4px;
-  text-transform: uppercase;
-  color: #aab;
-  font-weight: 400;
-}
-
-#name-input {
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid #556;
-  color: #e8e8f0;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 28px;
-  text-align: center;
-  padding: 8px 4px;
-  width: min(320px, 80vw);
-  outline: none;
-  caret-color: #ffd166;
-  transition: border-color 0.3s;
-}
-#name-input:focus {
-  border-color: #ffd166;
-}
-#name-input::placeholder {
-  color: #556;
-}
-
-#go-btn {
-  background: transparent;
-  border: 1px solid #445;
-  color: #bbc;
-  font-family: 'Space Mono', monospace;
-  font-size: 12px;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  padding: 10px 32px;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.3s;
+.header {
+  padding: 2rem 2.5rem;
   display: flex;
-  align-items: center;
-  gap: 8px;
-}
-#go-btn:hover {
-  border-color: #ffd166;
-  color: #ffd166;
+  justify-content: space-between;
+  align-items: flex-start;
 }
 
-/* HUD overlay */
-#hud {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 5;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 24px;
-  gap: 12px;
-  opacity: 0;
-  transition: opacity 1s ease 0.5s;
-  pointer-events: none;
+.logo {
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--sand);
+  opacity: 0.7;
 }
-#hud.visible {
-  opacity: 1;
+
+.signal {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--gray);
+  text-align: right;
+  line-height: 1.6;
+  opacity: 0.5;
+}
+
+.footer {
+  margin-top: auto;
+  padding: 2rem 2.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.hint {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--gray);
+  opacity: 0.4;
+  transition: opacity 0.3s;
+}
+
+.nav {
+  display: flex;
+  gap: 0.75rem;
   pointer-events: auto;
 }
 
-#universe-name {
+.nav button {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--cream);
   font-family: 'Space Mono', monospace;
-  font-size: 13px;
-  letter-spacing: 6px;
-  text-transform: uppercase;
-  color: #bbc;
-}
-
-#hud-actions {
-  display: flex;
-  gap: 16px;
-}
-
-.hud-btn {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.15);
-  color: #aab;
-  font-size: 18px;
-  padding: 10px;
-  width: 42px;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 0.7rem;
+  padding: 0.5rem 1rem;
   cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.05em;
+}
+
+.nav button:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.robot-id {
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: var(--dust);
+  opacity: 0.6;
+}
+
+/* --- Card text overlays (rendered on canvas textures instead) --- */
+
+/* --- Mobile --- */
+@media (max-width: 640px) {
+  .header, .footer { padding: 1.25rem; }
+  .logo { font-size: 0.65rem; }
+}
+
+/* --- Dust particles (CSS) --- */
+.dust {
+  position: fixed;
+  width: 2px;
+  height: 2px;
+  background: var(--sand);
   border-radius: 50%;
-  transition: all 0.3s;
-  -webkit-tap-highlight-color: transparent;
-}
-.hud-btn:hover, .hud-btn:active {
-  border-color: #ffd166;
-  color: #ffd166;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  animation: drift linear infinite;
 }
 
-/* Hint */
-#tilt-hint {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-family: 'Space Mono', monospace;
-  font-size: 12px;
-  letter-spacing: 2px;
-  color: #889;
-  z-index: 6;
-  opacity: 0;
-  transition: opacity 0.6s;
-  pointer-events: none;
-  text-align: center;
+@keyframes drift {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 0.3; }
+  90% { opacity: 0.15; }
+  100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
 }
-#tilt-hint.visible { opacity: 1; }
-
-/* Tone indicator */
-#tone-indicator {
-  position: fixed;
-  top: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-family: 'Space Mono', monospace;
-  font-size: 11px;
-  letter-spacing: 3px;
-  color: #ffd166;
-  z-index: 6;
-  opacity: 0;
-  transition: opacity 0.4s;
-  pointer-events: none;
-}
-#tone-indicator.visible { opacity: 1; }
 </style>
 </head>
 <body>
 
-<div id="entry">
-  <h1>Name Universe</h1>
-  <input id="name-input" type="text" placeholder="Enter a name" maxlength="24" autocomplete="off" spellcheck="false">
-  <button id="go-btn"><i class="iconoir-search"></i> Discover</button>
-</div>
+<canvas id="scene"></canvas>
 
-<div id="hud">
-  <div id="universe-name"></div>
-  <div id="hud-actions">
-    <button class="hud-btn" id="btn-new"><i class="iconoir-refresh-double"></i></button>
-    <button class="hud-btn" id="btn-share"><i class="iconoir-share-ios"></i></button>
+<div class="overlay">
+  <div class="header">
+    <div class="logo">Postcards from Mars</div>
+    <div class="signal" id="signal">
+      SIGNAL: ████░░ 67%<br>
+      RELAY-1 → EARTH<br>
+      DELAY: 12m 34s
+    </div>
+  </div>
+  <div class="footer">
+    <div>
+      <div class="robot-id" id="robotId">SCOUT-9</div>
+      <div class="hint" id="hint">click to flip · drag to tilt</div>
+    </div>
+    <div class="nav">
+      <button id="prevBtn">← PREV</button>
+      <button id="nextBtn">NEXT →</button>
+    </div>
   </div>
 </div>
-
-<div id="tilt-hint"></div>
-<div id="tone-indicator"></div>
 
 <script type="importmap">
 {
@@ -214,766 +178,487 @@ canvas { display: block; }
   }
 }
 </script>
+
 <script type="module">
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
-/* ── Seeded RNG ── */
-function cyrb128(str) {
-  let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;
-  for (let i = 0; i < str.length; i++) {
-    let k = str.charCodeAt(i);
-    h1 = h2 ^ Math.imul(h1 ^ k, 597399067);
-    h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
-    h3 = h4 ^ Math.imul(h3 ^ k, 951274213);
-    h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);
+// ─── Postcard data ───
+const postcards = [
+  {
+    id: 'scout-9',
+    name: 'SCOUT-9',
+    sol: 612,
+    coords: '4.5°S, 137.4°E',
+    signal: 67,
+    front: {
+      type: 'landscape',
+      title: 'HEART-SHAPED ROCK',
+      subtitle: 'Jezero Crater, Sol 612',
+      color: '#E8763A',
+    },
+    back: {
+      message: 'Sol 612: LOOK AT THIS!\nFound a rock shaped like a heart!\nKeeping it in my collection.\nMars isn\'t so lonely after all ♥\nMiss you, Earth!',
+    }
+  },
+  {
+    id: 'surveyor-2',
+    name: 'SURVEYOR-2',
+    sol: 2847,
+    coords: '18.4°N, 226.0°E',
+    signal: 52,
+    front: {
+      type: 'data',
+      title: 'DUST STORM #487',
+      subtitle: 'Olympus Mons Region, Sol 2847',
+      color: '#C1440E',
+    },
+    back: {
+      message: 'Sol 2847. Dust storm #487.\nSolar panels at 34%. Still operational.\nSame view, different storm.\nStill here.',
+    }
+  },
+  {
+    id: 'explorer-7',
+    name: 'EXPLORER-7',
+    sol: 1104,
+    coords: '14.6°S, 175.5°E',
+    signal: 71,
+    front: {
+      type: 'landscape',
+      title: 'TWO MOONS RISING',
+      subtitle: 'Hellas Basin, Sol 1104',
+      color: '#D4A574',
+    },
+    back: {
+      message: 'Sol 1104.\nPhobos rises twice tonight.\nTwo moons, two shadows.\nI wonder if Earth remembers us—\nthe small machines it sent away,\nstill looking up at the sky.',
+    }
+  },
+  {
+    id: 'mapper-4',
+    name: 'MAPPER-4',
+    sol: 923,
+    coords: '1.0°N, 247.0°E',
+    signal: 88,
+    front: {
+      type: 'data',
+      title: 'OLYMPUS MONS SCAN',
+      subtitle: 'Tharsis Region, Sol 923',
+      color: '#E8763A',
+    },
+    back: {
+      message: 'Sol 923. Olympus Mons: 21.9km tall.\nThat\'s 2.5x Mount Everest.\nTook 2,847 photos today.\nProcessed 18,394 data points.\nHere\'s the best one.',
+    }
+  },
+  {
+    id: 'relay-1',
+    name: 'RELAY-1',
+    sol: 1523,
+    coords: '0.0°, 0.0°E',
+    signal: 44,
+    front: {
+      type: 'data',
+      title: 'SIGNAL TRANSMISSION',
+      subtitle: 'Mars Relay Network, Sol 1523',
+      color: '#8B8B8B',
+    },
+    back: {
+      message: '[Status: X_X]\nSol 1523. Transmitted 847 messages today.\nEveryone else\'s words, traveling home.\nI\'m the voice that carries voices.\nSometimes I wonder if anyone\nhears mine.',
+    }
+  },
+];
+
+let currentIndex = 0;
+let isFlipped = false;
+let targetRotX = 0, targetRotY = 0;
+let currentRotX = 0, currentRotY = 0;
+let flipAngle = 0, targetFlip = 0;
+
+// ─── Scene setup ───
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+
+const scene = new THREE.Scene();
+
+// Mars sky gradient background
+const bgCanvas = document.createElement('canvas');
+bgCanvas.width = 2;
+bgCanvas.height = 512;
+const bgCtx = bgCanvas.getContext('2d');
+const grad = bgCtx.createLinearGradient(0, 0, 0, 512);
+grad.addColorStop(0, '#1A1210');
+grad.addColorStop(0.3, '#2A1A12');
+grad.addColorStop(0.6, '#3D2218');
+grad.addColorStop(0.85, '#5C3420');
+grad.addColorStop(1, '#1A1210');
+bgCtx.fillStyle = grad;
+bgCtx.fillRect(0, 0, 2, 512);
+const bgTex = new THREE.CanvasTexture(bgCanvas);
+scene.background = bgTex;
+
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 0, 4);
+
+// Lights
+const ambientLight = new THREE.AmbientLight(0xD4A574, 0.3);
+scene.add(ambientLight);
+
+const keyLight = new THREE.DirectionalLight(0xFFF0E0, 1.5);
+keyLight.position.set(3, 4, 5);
+scene.add(keyLight);
+
+const fillLight = new THREE.DirectionalLight(0xE8763A, 0.4);
+fillLight.position.set(-3, -1, 3);
+scene.add(fillLight);
+
+const rimLight = new THREE.DirectionalLight(0xC1440E, 0.6);
+rimLight.position.set(0, -2, -3);
+scene.add(rimLight);
+
+// ─── Card geometry ───
+const CARD_W = 1.6;
+const CARD_H = 2.2;
+const cardGroup = new THREE.Group();
+scene.add(cardGroup);
+
+// Generate front texture
+function createFrontTexture(postcard) {
+  const c = document.createElement('canvas');
+  c.width = 800;
+  c.height = 1100;
+  const ctx = c.getContext('2d');
+
+  // Background
+  const g = ctx.createLinearGradient(0, 0, 800, 1100);
+  g.addColorStop(0, '#2A1A12');
+  g.addColorStop(0.5, '#3D2218');
+  g.addColorStop(1, '#1A1210');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 800, 1100);
+
+  // Geometric decorative elements
+  ctx.strokeStyle = postcard.front.color + '40';
+  ctx.lineWidth = 1;
+
+  // Grid lines
+  for (let i = 0; i < 20; i++) {
+    const y = 80 + i * 50;
+    ctx.beginPath();
+    ctx.moveTo(60, y);
+    ctx.lineTo(740, y);
+    ctx.stroke();
   }
-  h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);
-  h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
-  h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
-  h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
-  h1 ^= h2 ^ h3 ^ h4; h2 ^= h1; h3 ^= h1; h4 ^= h1;
-  return [h1 >>> 0, h2 >>> 0, h3 >>> 0, h4 >>> 0];
+
+  // Topographic circles
+  ctx.strokeStyle = postcard.front.color + '30';
+  ctx.lineWidth = 0.8;
+  for (let r = 50; r < 350; r += 30) {
+    ctx.beginPath();
+    ctx.ellipse(500, 500, r, r * 0.7, -0.2, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Scan lines
+  ctx.strokeStyle = postcard.front.color + '20';
+  for (let i = 0; i < 800; i += 3) {
+    ctx.beginPath();
+    ctx.moveTo(i, 0);
+    ctx.lineTo(i, 1100);
+    ctx.stroke();
+  }
+
+  // Title area
+  ctx.fillStyle = postcard.front.color;
+  ctx.font = 'bold 48px "Archivo Black", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(postcard.front.title, 60, 900);
+
+  ctx.fillStyle = '#D4A574';
+  ctx.font = '18px "Space Mono", monospace';
+  ctx.fillText(postcard.front.subtitle, 60, 940);
+
+  // Border
+  ctx.strokeStyle = postcard.front.color + '60';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(30, 30, 740, 1040);
+
+  // Corner markers
+  const corners = [[30,30],[740,30],[30,1040],[740,1040]];
+  ctx.fillStyle = postcard.front.color;
+  corners.forEach(([x,y]) => {
+    ctx.fillRect(x-4, y-4, 8, 8);
+  });
+
+  return new THREE.CanvasTexture(c);
 }
 
-function sfc32(a, b, c, d) {
-  return function() {
-    a |= 0; b |= 0; c |= 0; d |= 0;
-    let t = (a + b | 0) + d | 0;
-    d = d + 1 | 0;
-    a = b ^ b >>> 9;
-    b = c + (c << 3) | 0;
-    c = (c << 21 | c >>> 11);
-    c = c + t | 0;
-    return (t >>> 0) / 4294967296;
-  };
+// Generate back texture
+function createBackTexture(postcard) {
+  const c = document.createElement('canvas');
+  c.width = 800;
+  c.height = 1100;
+  const ctx = c.getContext('2d');
+
+  // Dark background
+  ctx.fillStyle = '#1A1210';
+  ctx.fillRect(0, 0, 800, 1100);
+
+  // Subtle grid
+  ctx.strokeStyle = '#2A1A1240';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i < 800; i += 20) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 1100); ctx.stroke();
+  }
+  for (let i = 0; i < 1100; i += 20) {
+    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(800, i); ctx.stroke();
+  }
+
+  // Header — robot ID
+  ctx.fillStyle = '#E8763A';
+  ctx.font = 'bold 28px "Archivo Black", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(postcard.name, 60, 80);
+
+  // Separator line
+  ctx.strokeStyle = '#E8763A40';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(60, 100);
+  ctx.lineTo(740, 100);
+  ctx.stroke();
+
+  // Data fields
+  ctx.fillStyle = '#8B8B8B';
+  ctx.font = '14px "Space Mono", monospace';
+  ctx.fillText(`SOL ${postcard.sol}`, 60, 135);
+  ctx.fillText(`COORDS: ${postcard.coords}`, 60, 160);
+  ctx.fillText(`SIGNAL: ${'█'.repeat(Math.floor(postcard.signal/10))}${'░'.repeat(10-Math.floor(postcard.signal/10))} ${postcard.signal}%`, 60, 185);
+  ctx.fillText(`RELAY: RELAY-1 → EARTH`, 60, 210);
+
+  // Separator
+  ctx.strokeStyle = '#D4A57430';
+  ctx.beginPath();
+  ctx.moveTo(60, 240);
+  ctx.lineTo(740, 240);
+  ctx.stroke();
+
+  // Message
+  ctx.fillStyle = '#F5EDE3';
+  ctx.font = '22px "DM Sans", sans-serif';
+  const lines = postcard.back.message.split('\n');
+  lines.forEach((line, i) => {
+    ctx.fillText(line, 60, 300 + i * 36);
+  });
+
+  // Signature line
+  const msgBottom = 300 + lines.length * 36 + 30;
+  ctx.strokeStyle = '#D4A57430';
+  ctx.beginPath();
+  ctx.moveTo(60, msgBottom);
+  ctx.lineTo(740, msgBottom);
+  ctx.stroke();
+
+  ctx.fillStyle = '#D4A574';
+  ctx.font = '14px "Space Mono", monospace';
+  ctx.fillText(`— ${postcard.name}`, 60, msgBottom + 30);
+
+  // Bottom data decoration
+  ctx.fillStyle = '#8B8B8B30';
+  ctx.font = '10px "Space Mono", monospace';
+  for (let row = 0; row < 4; row++) {
+    let dataLine = '';
+    for (let col = 0; col < 8; col++) {
+      dataLine += Math.floor(Math.random() * 256).toString(2).padStart(8, '0') + '  ';
+    }
+    ctx.fillText(dataLine, 60, 980 + row * 18);
+  }
+
+  // Border
+  ctx.strokeStyle = '#D4A57430';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(30, 30, 740, 1040);
+
+  return new THREE.CanvasTexture(c);
 }
 
-function makeRng(name) {
-  const seed = cyrb128(name.toLowerCase().trim());
-  return sfc32(seed[0], seed[1], seed[2], seed[3]);
+// ─── Create card mesh ───
+let frontMat, backMat, cardMesh;
+
+function buildCard(index) {
+  const pc = postcards[index];
+
+  // Remove old card
+  while (cardGroup.children.length) cardGroup.remove(cardGroup.children[0]);
+
+  const frontTex = createFrontTexture(pc);
+  const backTex = createBackTexture(pc);
+
+  frontTex.colorSpace = THREE.SRGBColorSpace;
+  backTex.colorSpace = THREE.SRGBColorSpace;
+
+  frontMat = new THREE.MeshPhysicalMaterial({
+    map: frontTex,
+    metalness: 0.4,
+    roughness: 0.25,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.1,
+    reflectivity: 0.8,
+    side: THREE.FrontSide,
+  });
+
+  backMat = new THREE.MeshPhysicalMaterial({
+    map: backTex,
+    metalness: 0.3,
+    roughness: 0.3,
+    clearcoat: 0.8,
+    clearcoatRoughness: 0.15,
+    reflectivity: 0.6,
+    side: THREE.FrontSide,
+  });
+
+  // Front face
+  const frontGeo = new THREE.PlaneGeometry(CARD_W, CARD_H);
+  const frontMesh = new THREE.Mesh(frontGeo, frontMat);
+  frontMesh.name = 'front';
+
+  // Back face (flipped)
+  const backGeo = new THREE.PlaneGeometry(CARD_W, CARD_H);
+  const backMesh = new THREE.Mesh(backGeo, backMat);
+  backMesh.rotation.y = Math.PI;
+  backMesh.name = 'back';
+
+  // Card edge (thin box)
+  const edgeGeo = new THREE.BoxGeometry(CARD_W, CARD_H, 0.01);
+  const edgeMat = new THREE.MeshPhysicalMaterial({
+    color: 0xD4A574,
+    metalness: 0.6,
+    roughness: 0.3,
+    clearcoat: 1.0,
+  });
+  const edgeMesh = new THREE.Mesh(edgeGeo, edgeMat);
+  edgeMesh.name = 'edge';
+
+  frontMesh.position.z = 0.006;
+  backMesh.position.z = -0.006;
+
+  cardGroup.add(edgeMesh);
+  cardGroup.add(frontMesh);
+  cardGroup.add(backMesh);
+
+  // Update UI
+  document.getElementById('robotId').textContent = pc.name;
+  document.getElementById('signal').innerHTML =
+    `SIGNAL: ${'█'.repeat(Math.floor(pc.signal/10))}${'░'.repeat(10-Math.floor(pc.signal/10))} ${pc.signal}%<br>` +
+    `RELAY-1 → EARTH<br>` +
+    `SOL ${pc.sol} · ${pc.coords}`;
 }
 
-/* ── Pentatonic tones ── */
-const PENTATONIC = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25];
-let audioCtx = null;
+buildCard(0);
 
-function playTone(freqIndex) {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const freq = PENTATONIC[freqIndex % PENTATONIC.length];
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = 'sine';
-  osc.frequency.value = freq;
-  gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime + 1.2);
+// ─── Mouse / touch interaction ───
+let mouseX = 0, mouseY = 0;
+let isDragging = false;
 
-  const indicator = document.getElementById('tone-indicator');
-  const notes = ['C', 'D', 'E', 'G', 'A', 'C\'', 'D\'', 'E\''];
-  indicator.textContent = '♪ ' + notes[freqIndex % notes.length];
-  indicator.classList.add('visible');
-  clearTimeout(indicator._t);
-  indicator._t = setTimeout(() => indicator.classList.remove('visible'), 800);
+function onPointerMove(e) {
+  const x = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+  const y = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+  mouseX = (x / window.innerWidth) * 2 - 1;
+  mouseY = (y / window.innerHeight) * 2 - 1;
 }
 
-/* ── Color palette from seed ── */
-function generatePalette(rng) {
-  const palettes = [
-    ['#ff8906', '#f25f4c', '#e53170', '#ff6b6b'],   // ember sunset
-    ['#ff6b6b', '#feca57', '#ff9ff3', '#f368e0'],   // warm carnival
-    ['#ffd166', '#ef476f', '#06d6a0', '#118ab2'],   // joyful pop
-    ['#f7b731', '#fc5c65', '#a55eea', '#26de81'],   // playful bright
-    ['#ff9a76', '#ffeaa7', '#dfe6e9', '#fd79a8'],   // blush sunrise
-    ['#fdcb6e', '#e17055', '#00cec9', '#6c5ce7'],   // tropical joy
-  ];
-  return palettes[Math.floor(rng() * palettes.length)];
+window.addEventListener('pointermove', onPointerMove);
+
+// Click to flip
+canvas.addEventListener('click', () => {
+  isFlipped = !isFlipped;
+  targetFlip = isFlipped ? Math.PI : 0;
+  document.getElementById('hint').textContent = isFlipped ? 'click to flip back' : 'click to flip · drag to tilt';
+});
+
+// Nav
+document.getElementById('prevBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  currentIndex = (currentIndex - 1 + postcards.length) % postcards.length;
+  isFlipped = false;
+  targetFlip = 0;
+  flipAngle = 0;
+  buildCard(currentIndex);
+});
+
+document.getElementById('nextBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  currentIndex = (currentIndex + 1) % postcards.length;
+  isFlipped = false;
+  targetFlip = 0;
+  flipAngle = 0;
+  buildCard(currentIndex);
+});
+
+// ─── Dust particles (CSS) ───
+function spawnDust() {
+  const el = document.createElement('div');
+  el.className = 'dust';
+  el.style.left = Math.random() * 100 + 'vw';
+  el.style.top = Math.random() * 100 + 'vh';
+  el.style.setProperty('--dx', (Math.random() - 0.5) * 200 + 'px');
+  el.style.setProperty('--dy', (Math.random() - 0.5) * 200 + 'px');
+  const dur = 4 + Math.random() * 8;
+  el.style.animationDuration = dur + 's';
+  el.style.width = (1 + Math.random() * 2) + 'px';
+  el.style.height = el.style.width;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), dur * 1000);
 }
+setInterval(spawnDust, 300);
+for (let i = 0; i < 15; i++) setTimeout(spawnDust, i * 200);
 
-/* ── Three.js Scene ── */
-let scene, camera, renderer, composer, controls;
-let starsMesh, constellationLines, nebulaeMeshes = [];
-let cometMesh = null, cometTrail = null, cometActive = false, cometTime = 0;
-let gyroEnabled = false;
-let targetGyroX = 0, targetGyroY = 0;
-let currentGyroX = 0, currentGyroY = 0;
-let baseQuaternion = new THREE.Quaternion();
-let isActive = false;
-let raycaster, pointer;
-let starPositions = [];
-let constellationStarIndices = [];
-
-function init() {
-  scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
-  camera.position.set(0, 0, 5);
-
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setClearColor(0x020208);
-  document.body.prepend(renderer.domElement);
-
-  // Post-processing bloom
-  composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
-    1.2, 0.5, 0.3
-  );
-  composer.addPass(bloom);
-
-  // Controls (desktop)
-  controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.05;
-  controls.enableZoom = false;
-  controls.enablePan = false;
-  controls.rotateSpeed = 0.4;
-  controls.target.set(0, 0, 0);
-  controls.enabled = true;
-
-  raycaster = new THREE.Raycaster();
-  raycaster.params.Points.threshold = 0.15;
-  pointer = new THREE.Vector2();
-
-  window.addEventListener('resize', onResize);
-  renderer.domElement.addEventListener('pointerdown', onTap);
-}
-
-function onResize() {
+// ─── Resize ───
+window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setSize(window.innerWidth, window.innerHeight);
-}
+});
 
-function onTap(e) {
-  if (!isActive) return;
-  pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
-  pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
-  raycaster.setFromCamera(pointer, camera);
-
-  if (starsMesh) {
-    const intersects = raycaster.intersectObject(starsMesh);
-    if (intersects.length > 0) {
-      const idx = intersects[0].index;
-      playTone(idx);
-    }
-  }
-}
-
-/* ── Build Universe ── */
-function buildUniverse(name) {
-  // Clear previous
-  while (scene.children.length) scene.remove(scene.children[0]);
-  starPositions = [];
-  constellationStarIndices = [];
-  nebulaeMeshes = [];
-
-  const rng = makeRng(name);
-  const palette = generatePalette(rng);
-  const starCount = 8000 + Math.floor(rng() * 6000);
-  const spread = 80;
-
-  // ── Stars ──
-  const positions = new Float32Array(starCount * 3);
-  const colors = new Float32Array(starCount * 3);
-  const sizes = new Float32Array(starCount);
-
-  for (let i = 0; i < starCount; i++) {
-    const theta = rng() * Math.PI * 2;
-    const phi = Math.acos(2 * rng() - 1);
-    const r = spread * (0.3 + rng() * 0.7);
-    const x = r * Math.sin(phi) * Math.cos(theta);
-    const y = r * Math.sin(phi) * Math.sin(theta);
-    const z = r * Math.cos(phi);
-    positions[i * 3] = x;
-    positions[i * 3 + 1] = y;
-    positions[i * 3 + 2] = z;
-    starPositions.push(new THREE.Vector3(x, y, z));
-
-    const col = new THREE.Color(palette[Math.floor(rng() * palette.length)]);
-    const brightness = 0.5 + rng() * 0.5;
-    colors[i * 3] = col.r * brightness;
-    colors[i * 3 + 1] = col.g * brightness;
-    colors[i * 3 + 2] = col.b * brightness;
-
-    sizes[i] = 0.04 + rng() * 0.18;
-  }
-
-  const starGeom = new THREE.BufferGeometry();
-  starGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  starGeom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  starGeom.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-
-  const starMat = new THREE.ShaderMaterial({
-    vertexShader: `
-      attribute float size;
-      varying vec3 vColor;
-      void main() {
-        vColor = color;
-        vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
-        gl_PointSize = size * (300.0 / -mvPos.z);
-        gl_Position = projectionMatrix * mvPos;
-      }
-    `,
-    fragmentShader: `
-      varying vec3 vColor;
-      void main() {
-        float d = length(gl_PointCoord - vec2(0.5));
-        if (d > 0.5) discard;
-        float glow = 1.0 - smoothstep(0.0, 0.5, d);
-        gl_FragColor = vec4(vColor, glow * glow);
-      }
-    `,
-    vertexColors: true,
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-  });
-
-  starsMesh = new THREE.Points(starGeom, starMat);
-  scene.add(starsMesh);
-
-  // ── Constellation from name letters ──
-  const letters = name.toUpperCase().replace(/[^A-Z0-9]/g, '').split('');
-  const constellationCount = Math.min(letters.length, 12);
-  const conLinePositions = [];
-  const constellationRadius = 12 + rng() * 8;
-
-  for (let i = 0; i < constellationCount; i++) {
-    const angle = (i / constellationCount) * Math.PI * 2 + rng() * 0.4 - 0.2;
-    const yOff = (rng() - 0.5) * constellationRadius * 0.6;
-    const x = Math.cos(angle) * constellationRadius * (0.7 + rng() * 0.3);
-    const z = Math.sin(angle) * constellationRadius * (0.7 + rng() * 0.3);
-    const pos = new THREE.Vector3(x, yOff, z);
-
-    // Find nearest star and nudge it to constellation position
-    const nearIdx = i * Math.floor(starCount / constellationCount);
-    positions[nearIdx * 3] = pos.x;
-    positions[nearIdx * 3 + 1] = pos.y;
-    positions[nearIdx * 3 + 2] = pos.z;
-    sizes[nearIdx] = 0.2 + rng() * 0.1;
-    const cc = new THREE.Color(palette[0]);
-    colors[nearIdx * 3] = cc.r;
-    colors[nearIdx * 3 + 1] = cc.g;
-    colors[nearIdx * 3 + 2] = cc.b;
-    starPositions[nearIdx] = pos.clone();
-    constellationStarIndices.push(nearIdx);
-
-    if (i > 0) {
-      const prevIdx = constellationStarIndices[i - 1];
-      conLinePositions.push(
-        starPositions[prevIdx].x, starPositions[prevIdx].y, starPositions[prevIdx].z,
-        pos.x, pos.y, pos.z
-      );
-    }
-  }
-  // Close the loop
-  if (constellationCount > 2) {
-    const first = starPositions[constellationStarIndices[0]];
-    const last = starPositions[constellationStarIndices[constellationCount - 1]];
-    conLinePositions.push(last.x, last.y, last.z, first.x, first.y, first.z);
-  }
-
-  // Update star geometry
-  starGeom.attributes.position.needsUpdate = true;
-  starGeom.attributes.color.needsUpdate = true;
-  starGeom.attributes.size.needsUpdate = true;
-
-  // Constellation lines
-  const lineGeom = new THREE.BufferGeometry();
-  lineGeom.setAttribute('position', new THREE.Float32BufferAttribute(conLinePositions, 3));
-  const lineMat = new THREE.LineBasicMaterial({
-    color: new THREE.Color(palette[0]),
-    transparent: true,
-    opacity: 0.25,
-    blending: THREE.AdditiveBlending,
-  });
-  constellationLines = new THREE.LineSegments(lineGeom, lineMat);
-  scene.add(constellationLines);
-
-  // ── Nebulae (soft glowing sprites) ──
-  const nebulaCount = 3 + Math.floor(rng() * 3);
-  for (let i = 0; i < nebulaCount; i++) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
-    const ctx = canvas.getContext('2d');
-    const grad = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
-    const col = palette[Math.floor(rng() * palette.length)];
-    grad.addColorStop(0, col + '40');
-    grad.addColorStop(0.4, col + '18');
-    grad.addColorStop(1, 'transparent');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 256, 256);
-
-    const tex = new THREE.CanvasTexture(canvas);
-    const spriteMat = new THREE.SpriteMaterial({
-      map: tex,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      opacity: 0.4 + rng() * 0.3,
-    });
-    const sprite = new THREE.Sprite(spriteMat);
-    const nr = spread * 0.5;
-    sprite.position.set(
-      (rng() - 0.5) * nr,
-      (rng() - 0.5) * nr,
-      (rng() - 0.5) * nr
-    );
-    const s = 15 + rng() * 25;
-    sprite.scale.set(s, s, 1);
-    scene.add(sprite);
-    nebulaeMeshes.push(sprite);
-  }
-
-  // ── Central Planet ──
-  const planetRadius = 0.5 + rng() * 0.3;
-  const planetDetail = 64;
-  const planetGeom = new THREE.SphereGeometry(planetRadius, planetDetail, planetDetail);
-
-  // Procedural planet texture from canvas
-  const ptexSize = 512;
-  const ptexCanvas = document.createElement('canvas');
-  ptexCanvas.width = ptexSize;
-  ptexCanvas.height = ptexSize;
-  const ptx = ptexCanvas.getContext('2d');
-
-  // Base gradient
-  const baseCol1 = palette[0];
-  const baseCol2 = palette[1];
-  const pGrad = ptx.createLinearGradient(0, 0, ptexSize, ptexSize);
-  pGrad.addColorStop(0, baseCol1);
-  pGrad.addColorStop(0.5, baseCol2);
-  pGrad.addColorStop(1, palette[2] || baseCol1);
-  ptx.fillStyle = pGrad;
-  ptx.fillRect(0, 0, ptexSize, ptexSize);
-
-  // Organic swirl bands
-  for (let b = 0; b < 8; b++) {
-    ptx.globalAlpha = 0.12 + rng() * 0.15;
-    ptx.fillStyle = palette[Math.floor(rng() * palette.length)];
-    const yy = rng() * ptexSize;
-    const h = 20 + rng() * 60;
-    ptx.beginPath();
-    ptx.ellipse(ptexSize / 2, yy, ptexSize * 0.6, h, rng() * 0.3, 0, Math.PI * 2);
-    ptx.fill();
-  }
-  // Noise dots for texture
-  for (let n = 0; n < 2000; n++) {
-    ptx.globalAlpha = rng() * 0.08;
-    ptx.fillStyle = rng() > 0.5 ? '#ffffff' : '#000000';
-    ptx.fillRect(rng() * ptexSize, rng() * ptexSize, 2, 2);
-  }
-  ptx.globalAlpha = 1;
-
-  const planetTex = new THREE.CanvasTexture(ptexCanvas);
-  const planetMat = new THREE.MeshStandardMaterial({
-    map: planetTex,
-    roughness: 0.7,
-    metalness: 0.1,
-  });
-  const planet = new THREE.Mesh(planetGeom, planetMat);
-  planet.position.set(0, 0, 0);
-  scene.add(planet);
-
-  // Atmosphere glow
-  const atmosGeom = new THREE.SphereGeometry(planetRadius * 1.15, 48, 48);
-  const atmosMat = new THREE.ShaderMaterial({
-    vertexShader: `
-      varying vec3 vNormal;
-      varying vec3 vPosition;
-      void main() {
-        vNormal = normalize(normalMatrix * normal);
-        vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      uniform vec3 glowColor;
-      varying vec3 vNormal;
-      varying vec3 vPosition;
-      void main() {
-        float intensity = pow(0.65 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.0);
-        gl_FragColor = vec4(glowColor, intensity * 0.6);
-      }
-    `,
-    uniforms: {
-      glowColor: { value: new THREE.Color(palette[0]) }
-    },
-    side: THREE.BackSide,
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-  });
-  const atmosphere = new THREE.Mesh(atmosGeom, atmosMat);
-  scene.add(atmosphere);
-
-  // Light for planet
-  const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
-  sunLight.position.set(5, 3, 7);
-  scene.add(sunLight);
-  const ambLight = new THREE.AmbientLight(0x333344, 0.5);
-  scene.add(ambLight);
-
-  // Store planet ref for rotation in animate loop
-  scene._planet = planet;
-  scene._atmosphere = atmosphere;
-
-  // ── Planetary Ring (50% chance) ──
-  if (rng() > 0.4) {
-    const innerR = planetRadius * 1.4;
-    const outerR = planetRadius * 2.2 + rng() * 0.5;
-    const ringGeom = new THREE.RingGeometry(innerR, outerR, 96);
-    // Colorful ring texture
-    const ringCanvas = document.createElement('canvas');
-    ringCanvas.width = 512;
-    ringCanvas.height = 64;
-    const rctx = ringCanvas.getContext('2d');
-    const ringGrad = rctx.createLinearGradient(0, 0, 512, 0);
-    ringGrad.addColorStop(0, palette[0] + '00');
-    ringGrad.addColorStop(0.15, palette[1] + 'aa');
-    ringGrad.addColorStop(0.4, palette[0] + 'cc');
-    ringGrad.addColorStop(0.6, palette[2] + '88');
-    ringGrad.addColorStop(0.85, palette[1] + 'aa');
-    ringGrad.addColorStop(1, palette[0] + '00');
-    rctx.fillStyle = ringGrad;
-    rctx.fillRect(0, 0, 512, 64);
-    // Add subtle bands
-    for (let i = 0; i < 12; i++) {
-      rctx.globalAlpha = 0.1 + rng() * 0.15;
-      rctx.fillStyle = rng() > 0.5 ? '#ffffff' : '#000000';
-      const ry = Math.floor(rng() * 64);
-      rctx.fillRect(0, ry, 512, 1 + Math.floor(rng() * 3));
-    }
-    rctx.globalAlpha = 1;
-
-    const ringTex = new THREE.CanvasTexture(ringCanvas);
-    const ringMat = new THREE.MeshStandardMaterial({
-      map: ringTex,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.7,
-      depthWrite: false,
-      blending: THREE.NormalBlending,
-    });
-    const ring = new THREE.Mesh(ringGeom, ringMat);
-    ring.rotation.x = Math.PI * 0.42 + (rng() - 0.5) * 0.3;
-    scene.add(ring);
-    scene._ring = ring;
-  }
-
-  // ── Ambient dust (tiny particles in foreground) ──
-  const dustCount = 500;
-  const dustPos = new Float32Array(dustCount * 3);
-  const dustSizes = new Float32Array(dustCount);
-  for (let i = 0; i < dustCount; i++) {
-    dustPos[i * 3] = (rng() - 0.5) * 30;
-    dustPos[i * 3 + 1] = (rng() - 0.5) * 30;
-    dustPos[i * 3 + 2] = (rng() - 0.5) * 30;
-    dustSizes[i] = 0.02 + rng() * 0.04;
-  }
-  const dustGeom = new THREE.BufferGeometry();
-  dustGeom.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
-  dustGeom.setAttribute('size', new THREE.BufferAttribute(dustSizes, 1));
-  const dustMat = new THREE.ShaderMaterial({
-    vertexShader: `
-      attribute float size;
-      void main() {
-        vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
-        gl_PointSize = size * (200.0 / -mvPos.z);
-        gl_Position = projectionMatrix * mvPos;
-      }
-    `,
-    fragmentShader: `
-      void main() {
-        float d = length(gl_PointCoord - vec2(0.5));
-        if (d > 0.5) discard;
-        float a = 1.0 - smoothstep(0.0, 0.5, d);
-        gl_FragColor = vec4(0.6, 0.6, 0.7, a * 0.3);
-      }
-    `,
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-  });
-  const dustMesh = new THREE.Points(dustGeom, dustMat);
-  scene.add(dustMesh);
-
-  // ── Comet ──
-  const cometGeom = new THREE.SphereGeometry(0.08, 12, 12);
-  const cometMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  cometMesh = new THREE.Mesh(cometGeom, cometMat);
-  cometMesh.visible = false;
-  scene.add(cometMesh);
-
-  // Comet trail
-  const trailCount = 60;
-  const trailPos = new Float32Array(trailCount * 3);
-  const trailSizes = new Float32Array(trailCount);
-  const trailOpacities = new Float32Array(trailCount);
-  for (let i = 0; i < trailCount; i++) {
-    trailSizes[i] = 0.06 * (1 - i / trailCount);
-    trailOpacities[i] = 1 - i / trailCount;
-  }
-  const trailGeom = new THREE.BufferGeometry();
-  trailGeom.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
-  trailGeom.setAttribute('size', new THREE.BufferAttribute(trailSizes, 1));
-  trailGeom.setAttribute('opacity', new THREE.BufferAttribute(trailOpacities, 1));
-  const trailMat = new THREE.ShaderMaterial({
-    vertexShader: `
-      attribute float size;
-      attribute float opacity;
-      varying float vOpacity;
-      void main() {
-        vOpacity = opacity;
-        vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
-        gl_PointSize = size * (300.0 / -mvPos.z);
-        gl_Position = projectionMatrix * mvPos;
-      }
-    `,
-    fragmentShader: `
-      uniform vec3 trailColor;
-      varying float vOpacity;
-      void main() {
-        float d = length(gl_PointCoord - vec2(0.5));
-        if (d > 0.5) discard;
-        float glow = 1.0 - smoothstep(0.0, 0.5, d);
-        gl_FragColor = vec4(trailColor, glow * vOpacity * 0.7);
-      }
-    `,
-    uniforms: {
-      trailColor: { value: new THREE.Color(palette[0]) }
-    },
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-  });
-  cometTrail = new THREE.Points(trailGeom, trailMat);
-  cometTrail.visible = false;
-  scene.add(cometTrail);
-}
-
-/* ── Gyroscope ── */
-function initGyroscope() {
-  if (typeof DeviceOrientationEvent !== 'undefined' &&
-      typeof DeviceOrientationEvent.requestPermission === 'function') {
-    DeviceOrientationEvent.requestPermission()
-      .then(state => { if (state === 'granted') enableGyro(); })
-      .catch(() => {});
-  } else if ('DeviceOrientationEvent' in window) {
-    enableGyro();
-  }
-}
-
-function enableGyro() {
-  let hasRealData = false;
-  window.addEventListener('deviceorientation', (e) => {
-    if (!isActive) return;
-    if (!hasRealData) {
-      if (e.beta === null && e.gamma === null) return;
-      if (Math.abs(e.beta) < 0.01 && Math.abs(e.gamma) < 0.01) return;
-      hasRealData = true;
-      gyroEnabled = true;
-      // Don't disable OrbitControls — gyro is additive
-    }
-    const maxTilt = 8;
-    targetGyroX = THREE.MathUtils.clamp((e.beta - 45) / 90, -1, 1) * maxTilt * (Math.PI / 180);
-    targetGyroY = THREE.MathUtils.clamp(e.gamma / 90, -1, 1) * maxTilt * (Math.PI / 180);
-  }, true);
-}
-
-/* ── Fly-in animation ── */
-function flyIn() {
-  camera.position.set(0, 0, 120);
-  const target = { z: 5 };
-  const duration = 2500;
-  const start = performance.now();
-  const ease = t => 1 - Math.pow(1 - t, 3); // easeOutCubic
-
-  function step(now) {
-    const t = Math.min((now - start) / duration, 1);
-    camera.position.z = 120 + (5 - 120) * ease(t);
-    if (t < 1) requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
-}
-
-/* ── Animation loop ── */
+// ─── Animate ───
 function animate() {
   requestAnimationFrame(animate);
-  if (!isActive) return;
 
-  // Gyro: subtle scene tilt (additive to orbit controls)
-  if (gyroEnabled) {
-    currentGyroX += (targetGyroX - currentGyroX) * 0.04;
-    currentGyroY += (targetGyroY - currentGyroY) * 0.04;
-    scene.rotation.x = currentGyroX;
-    scene.rotation.z = currentGyroY;
-  }
-  controls.update();
+  // Smooth tilt
+  const tiltStrength = 0.15;
+  targetRotY = mouseX * tiltStrength;
+  targetRotX = -mouseY * tiltStrength;
 
-  // Gentle scene rotation
-  if (starsMesh) starsMesh.rotation.y += 0.0001;
-  if (constellationLines) constellationLines.rotation.y += 0.0001;
-  nebulaeMeshes.forEach(n => n.material.rotation += 0.0002);
-  if (scene._planet) scene._planet.rotation.y += 0.001;
-  if (scene._atmosphere) scene._atmosphere.rotation.y += 0.0005;
-  if (scene._ring) scene._ring.rotation.z += 0.0003;
+  currentRotX += (targetRotX - currentRotX) * 0.08;
+  currentRotY += (targetRotY - currentRotY) * 0.08;
 
-  // ── Comet ──
-  if (!cometActive) {
-    cometTime++;
-    // Spawn roughly every 8-15 seconds (at 60fps)
-    if (cometTime > 480 + Math.random() * 420) {
-      cometActive = true;
-      cometTime = 0;
-      cometMesh.visible = true;
-      cometTrail.visible = true;
-      // Random start/end on a sphere shell
-      const theta1 = Math.random() * Math.PI * 2;
-      const phi1 = Math.random() * Math.PI;
-      const r = 40 + Math.random() * 20;
-      cometMesh.userData.start = new THREE.Vector3(
-        r * Math.sin(phi1) * Math.cos(theta1),
-        r * Math.sin(phi1) * Math.sin(theta1),
-        r * Math.cos(phi1)
-      );
-      // End: roughly opposite side with offset
-      const theta2 = theta1 + Math.PI + (Math.random() - 0.5) * 1.5;
-      const phi2 = Math.PI - phi1 + (Math.random() - 0.5) * 0.8;
-      cometMesh.userData.end = new THREE.Vector3(
-        r * Math.sin(phi2) * Math.cos(theta2),
-        r * Math.sin(phi2) * Math.sin(theta2),
-        r * Math.cos(phi2)
-      );
-      cometMesh.userData.progress = 0;
-      cometMesh.userData.history = [];
-    }
-  }
-  if (cometActive && cometMesh) {
-    const speed = 0.006;
-    cometMesh.userData.progress += speed;
-    const t = cometMesh.userData.progress;
-    if (t >= 1) {
-      cometActive = false;
-      cometMesh.visible = false;
-      cometTrail.visible = false;
-    } else {
-      // Slight arc through center area
-      const s = cometMesh.userData.start;
-      const e = cometMesh.userData.end;
-      const mid = new THREE.Vector3().lerpVectors(s, e, 0.5);
-      mid.y += 8; // arc upward
-      // Quadratic bezier
-      const it = 1 - t;
-      const px = it * it * s.x + 2 * it * t * mid.x + t * t * e.x;
-      const py = it * it * s.y + 2 * it * t * mid.y + t * t * e.y;
-      const pz = it * it * s.z + 2 * it * t * mid.z + t * t * e.z;
-      cometMesh.position.set(px, py, pz);
+  // Smooth flip
+  flipAngle += (targetFlip - flipAngle) * 0.08;
 
-      // Update trail
-      const hist = cometMesh.userData.history;
-      hist.unshift(px, py, pz);
-      const trailArr = cometTrail.geometry.attributes.position.array;
-      const maxPts = trailArr.length;
-      for (let i = 0; i < maxPts; i++) {
-        trailArr[i] = i < hist.length ? hist[i] : (hist[hist.length - 3 + (i % 3)] || 0);
-      }
-      if (hist.length > maxPts) hist.length = maxPts;
-      cometTrail.geometry.attributes.position.needsUpdate = true;
-    }
-  }
+  cardGroup.rotation.x = currentRotX;
+  cardGroup.rotation.y = currentRotY + flipAngle;
 
-  composer.render();
+  // Subtle float
+  cardGroup.position.y = Math.sin(Date.now() * 0.001) * 0.03;
+
+  // Light follows mouse slightly
+  keyLight.position.x = 3 + mouseX * 2;
+  keyLight.position.y = 4 + mouseY * 1;
+
+  renderer.render(scene, camera);
 }
 
-/* ── Launch ── */
-function launch(name) {
-  if (!name.trim()) return;
-  isActive = true;
-
-  buildUniverse(name);
-  flyIn();
-
-  document.getElementById('entry').classList.add('hidden');
-  document.getElementById('hud').classList.add('visible');
-  document.getElementById('universe-name').textContent = name.toUpperCase();
-
-  controls.enabled = true;
-
-  // Tilt hint
-  const hint = document.getElementById('tilt-hint');
-  const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-  hint.textContent = isMobile ? 'Tilt your phone to explore' : 'Drag to explore';
-  hint.classList.add('visible');
-  setTimeout(() => hint.classList.remove('visible'), 3000);
-
-  // URL
-  const url = new URL(window.location);
-  url.searchParams.set('name', name);
-  history.replaceState(null, '', url);
-
-  // Request gyro on mobile (iOS needs gesture)
-  if (isMobile) initGyroscope();
-}
-
-/* ── UI Bindings ── */
-init();
 animate();
 
-const input = document.getElementById('name-input');
-const goBtn = document.getElementById('go-btn');
-
-goBtn.addEventListener('click', () => launch(input.value));
-input.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') launch(input.value);
+// ─── Keyboard nav ───
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') document.getElementById('prevBtn').click();
+  if (e.key === 'ArrowRight') document.getElementById('nextBtn').click();
+  if (e.key === ' ') { e.preventDefault(); canvas.click(); }
 });
-
-document.getElementById('btn-new').addEventListener('click', () => {
-  isActive = false;
-  document.getElementById('entry').classList.remove('hidden');
-  document.getElementById('hud').classList.remove('visible');
-  input.value = '';
-  input.focus();
-  camera.position.set(0, 0, 5);
-  gyroEnabled = false;
-  currentGyroX = 0; currentGyroY = 0;
-  targetGyroX = 0; targetGyroY = 0;
-  controls.enabled = true;
-  controls.reset();
-});
-
-document.getElementById('btn-share').addEventListener('click', () => {
-  const url = window.location.href;
-  if (navigator.share) {
-    navigator.share({ title: 'Name Universe', url });
-  } else {
-    navigator.clipboard.writeText(url).then(() => {
-      const btn = document.getElementById('btn-share');
-      btn.innerHTML = '<i class="iconoir-check"></i>';
-      setTimeout(() => btn.innerHTML = '<i class="iconoir-share-ios"></i>', 2000);
-    });
-  }
-});
-
-// Auto-launch from URL param
-const urlName = new URLSearchParams(window.location.search).get('name');
-if (urlName) {
-  input.value = urlName;
-  setTimeout(() => launch(urlName), 300);
-} else {
-  input.focus();
-}
 </script>
+
 </body>
 </html>
