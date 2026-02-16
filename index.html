@@ -14,7 +14,7 @@
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  background: #06060f;
+  background: #020208;
   color: #e8e8f0;
   font-family: 'DM Sans', sans-serif;
   overflow: hidden;
@@ -36,7 +36,7 @@ canvas { display: block; }
   align-items: center;
   justify-content: center;
   gap: 24px;
-  background: #06060f;
+  background: #020208;
   transition: opacity 0.8s ease, visibility 0.8s ease;
 }
 #entry.hidden {
@@ -299,6 +299,7 @@ function generatePalette(rng) {
 /* ── Three.js Scene ── */
 let scene, camera, renderer, composer, controls;
 let starsMesh, constellationLines, nebulaeMeshes = [];
+let cometMesh = null, cometTrail = null, cometActive = false, cometTime = 0;
 let gyroEnabled = false;
 let targetGyroX = 0, targetGyroY = 0;
 let currentGyroX = 0, currentGyroY = 0;
@@ -316,7 +317,7 @@ function init() {
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setClearColor(0x06060f);
+  renderer.setClearColor(0x020208);
   document.body.prepend(renderer.domElement);
 
   // Post-processing bloom
@@ -378,7 +379,7 @@ function buildUniverse(name) {
 
   const rng = makeRng(name);
   const palette = generatePalette(rng);
-  const starCount = 3000 + Math.floor(rng() * 4000);
+  const starCount = 8000 + Math.floor(rng() * 6000);
   const spread = 80;
 
   // ── Stars ──
@@ -707,6 +708,59 @@ function buildUniverse(name) {
   });
   const dustMesh = new THREE.Points(dustGeom, dustMat);
   scene.add(dustMesh);
+
+  // ── Comet ──
+  const cometGeom = new THREE.SphereGeometry(0.08, 12, 12);
+  const cometMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  cometMesh = new THREE.Mesh(cometGeom, cometMat);
+  cometMesh.visible = false;
+  scene.add(cometMesh);
+
+  // Comet trail
+  const trailCount = 60;
+  const trailPos = new Float32Array(trailCount * 3);
+  const trailSizes = new Float32Array(trailCount);
+  const trailOpacities = new Float32Array(trailCount);
+  for (let i = 0; i < trailCount; i++) {
+    trailSizes[i] = 0.06 * (1 - i / trailCount);
+    trailOpacities[i] = 1 - i / trailCount;
+  }
+  const trailGeom = new THREE.BufferGeometry();
+  trailGeom.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
+  trailGeom.setAttribute('size', new THREE.BufferAttribute(trailSizes, 1));
+  trailGeom.setAttribute('opacity', new THREE.BufferAttribute(trailOpacities, 1));
+  const trailMat = new THREE.ShaderMaterial({
+    vertexShader: `
+      attribute float size;
+      attribute float opacity;
+      varying float vOpacity;
+      void main() {
+        vOpacity = opacity;
+        vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = size * (300.0 / -mvPos.z);
+        gl_Position = projectionMatrix * mvPos;
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 trailColor;
+      varying float vOpacity;
+      void main() {
+        float d = length(gl_PointCoord - vec2(0.5));
+        if (d > 0.5) discard;
+        float glow = 1.0 - smoothstep(0.0, 0.5, d);
+        gl_FragColor = vec4(trailColor, glow * vOpacity * 0.7);
+      }
+    `,
+    uniforms: {
+      trailColor: { value: new THREE.Color(palette[0]) }
+    },
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  cometTrail = new THREE.Points(trailGeom, trailMat);
+  cometTrail.visible = false;
+  scene.add(cometTrail);
 }
 
 /* ── Gyroscope ── */
@@ -775,6 +829,70 @@ function animate() {
   if (scene._planet) scene._planet.rotation.y += 0.001;
   if (scene._atmosphere) scene._atmosphere.rotation.y += 0.0005;
   if (scene._ring) scene._ring.rotation.z += 0.0003;
+
+  // ── Comet ──
+  if (!cometActive) {
+    cometTime++;
+    // Spawn roughly every 8-15 seconds (at 60fps)
+    if (cometTime > 480 + Math.random() * 420) {
+      cometActive = true;
+      cometTime = 0;
+      cometMesh.visible = true;
+      cometTrail.visible = true;
+      // Random start/end on a sphere shell
+      const theta1 = Math.random() * Math.PI * 2;
+      const phi1 = Math.random() * Math.PI;
+      const r = 40 + Math.random() * 20;
+      cometMesh.userData.start = new THREE.Vector3(
+        r * Math.sin(phi1) * Math.cos(theta1),
+        r * Math.sin(phi1) * Math.sin(theta1),
+        r * Math.cos(phi1)
+      );
+      // End: roughly opposite side with offset
+      const theta2 = theta1 + Math.PI + (Math.random() - 0.5) * 1.5;
+      const phi2 = Math.PI - phi1 + (Math.random() - 0.5) * 0.8;
+      cometMesh.userData.end = new THREE.Vector3(
+        r * Math.sin(phi2) * Math.cos(theta2),
+        r * Math.sin(phi2) * Math.sin(theta2),
+        r * Math.cos(phi2)
+      );
+      cometMesh.userData.progress = 0;
+      cometMesh.userData.history = [];
+    }
+  }
+  if (cometActive && cometMesh) {
+    const speed = 0.006;
+    cometMesh.userData.progress += speed;
+    const t = cometMesh.userData.progress;
+    if (t >= 1) {
+      cometActive = false;
+      cometMesh.visible = false;
+      cometTrail.visible = false;
+    } else {
+      // Slight arc through center area
+      const s = cometMesh.userData.start;
+      const e = cometMesh.userData.end;
+      const mid = new THREE.Vector3().lerpVectors(s, e, 0.5);
+      mid.y += 8; // arc upward
+      // Quadratic bezier
+      const it = 1 - t;
+      const px = it * it * s.x + 2 * it * t * mid.x + t * t * e.x;
+      const py = it * it * s.y + 2 * it * t * mid.y + t * t * e.y;
+      const pz = it * it * s.z + 2 * it * t * mid.z + t * t * e.z;
+      cometMesh.position.set(px, py, pz);
+
+      // Update trail
+      const hist = cometMesh.userData.history;
+      hist.unshift(px, py, pz);
+      const trailArr = cometTrail.geometry.attributes.position.array;
+      const maxPts = trailArr.length;
+      for (let i = 0; i < maxPts; i++) {
+        trailArr[i] = i < hist.length ? hist[i] : (hist[hist.length - 3 + (i % 3)] || 0);
+      }
+      if (hist.length > maxPts) hist.length = maxPts;
+      cometTrail.geometry.attributes.position.needsUpdate = true;
+    }
+  }
 
   composer.render();
 }
