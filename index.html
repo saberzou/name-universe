@@ -622,6 +622,49 @@ function buildUniverse(name) {
   scene._planet = planet;
   scene._atmosphere = atmosphere;
 
+  // ── Planetary Ring (50% chance) ──
+  if (rng() > 0.4) {
+    const innerR = planetRadius * 1.4;
+    const outerR = planetRadius * 2.2 + rng() * 0.5;
+    const ringGeom = new THREE.RingGeometry(innerR, outerR, 96);
+    // Colorful ring texture
+    const ringCanvas = document.createElement('canvas');
+    ringCanvas.width = 512;
+    ringCanvas.height = 64;
+    const rctx = ringCanvas.getContext('2d');
+    const ringGrad = rctx.createLinearGradient(0, 0, 512, 0);
+    ringGrad.addColorStop(0, palette[0] + '00');
+    ringGrad.addColorStop(0.15, palette[1] + 'aa');
+    ringGrad.addColorStop(0.4, palette[0] + 'cc');
+    ringGrad.addColorStop(0.6, palette[2] + '88');
+    ringGrad.addColorStop(0.85, palette[1] + 'aa');
+    ringGrad.addColorStop(1, palette[0] + '00');
+    rctx.fillStyle = ringGrad;
+    rctx.fillRect(0, 0, 512, 64);
+    // Add subtle bands
+    for (let i = 0; i < 12; i++) {
+      rctx.globalAlpha = 0.1 + rng() * 0.15;
+      rctx.fillStyle = rng() > 0.5 ? '#ffffff' : '#000000';
+      const ry = Math.floor(rng() * 64);
+      rctx.fillRect(0, ry, 512, 1 + Math.floor(rng() * 3));
+    }
+    rctx.globalAlpha = 1;
+
+    const ringTex = new THREE.CanvasTexture(ringCanvas);
+    const ringMat = new THREE.MeshStandardMaterial({
+      map: ringTex,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.7,
+      depthWrite: false,
+      blending: THREE.NormalBlending,
+    });
+    const ring = new THREE.Mesh(ringGeom, ringMat);
+    ring.rotation.x = Math.PI * 0.42 + (rng() - 0.5) * 0.3;
+    scene.add(ring);
+    scene._ring = ring;
+  }
+
   // ── Ambient dust (tiny particles in foreground) ──
   const dustCount = 500;
   const dustPos = new Float32Array(dustCount * 3);
@@ -728,6 +771,7 @@ function animate() {
   nebulaeMeshes.forEach(n => n.material.rotation += 0.0002);
   if (scene._planet) scene._planet.rotation.y += 0.001;
   if (scene._atmosphere) scene._atmosphere.rotation.y += 0.0005;
+  if (scene._ring) scene._ring.rotation.z += 0.0003;
 
   composer.render();
 }
