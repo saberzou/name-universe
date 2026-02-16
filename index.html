@@ -328,8 +328,9 @@ function init() {
   controls.dampingFactor = 0.05;
   controls.enableZoom = false;
   controls.enablePan = false;
-  controls.rotateSpeed = 0.3;
-  controls.enabled = false;
+  controls.rotateSpeed = 0.4;
+  controls.target.set(0, 0, 0);
+  controls.enabled = true;
 
   raycaster = new THREE.Raycaster();
   raycaster.params.Points.threshold = 0.15;
@@ -672,10 +673,17 @@ function initGyroscope() {
 }
 
 function enableGyro() {
+  let hasRealData = false;
   window.addEventListener('deviceorientation', (e) => {
     if (!isActive) return;
-    gyroEnabled = true;
-    controls.enabled = false;
+    // Only enable gyro if we get meaningful data (not all zeros)
+    if (!hasRealData) {
+      if (e.beta === null && e.gamma === null) return;
+      if (Math.abs(e.beta) < 0.01 && Math.abs(e.gamma) < 0.01) return;
+      hasRealData = true;
+      gyroEnabled = true;
+      controls.enabled = false;
+    }
     const maxTilt = 15;
     targetGyroX = THREE.MathUtils.clamp((e.beta - 45) / 90, -1, 1) * maxTilt * (Math.PI / 180);
     targetGyroY = THREE.MathUtils.clamp(e.gamma / 90, -1, 1) * maxTilt * (Math.PI / 180);
@@ -736,7 +744,7 @@ function launch(name) {
   document.getElementById('hud').classList.add('visible');
   document.getElementById('universe-name').textContent = name.toUpperCase();
 
-  controls.enabled = !gyroEnabled;
+  controls.enabled = true;
 
   // Tilt hint
   const hint = document.getElementById('tilt-hint');
